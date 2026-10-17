@@ -9,14 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Unzip project
-        run: unzip -q herobrine-forge-1.20.1-1.zip
+      - name: Unzip newest project zip
+        run: |
+          ZIP=$(git log -1 --name-only --format= -- '*.zip' | head -1)
+          echo "Using $ZIP"
+          unzip -q "$ZIP"
 
       - name: Build
         working-directory: herobrine-forge-1.20.1
