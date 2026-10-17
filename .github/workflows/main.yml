@@ -15,7 +15,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Unzip project
+        run: unzip -q herobrine-forge-1.20.1.zip
+
       - name: Build
+        working-directory: herobrine-forge-1.20.1
         run: |
           chmod +x gradlew
           ./gradlew build --no-daemon
@@ -23,4 +27,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: herobrinemod
-          path: build/libs/*.jar
+          path: herobrine-forge-1.20.1/build/libs/*.jar
