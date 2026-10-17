@@ -16,7 +16,7 @@ jobs:
           java-version: 17
 
       - name: Unzip project
-        run: unzip -q herobrine-forge-1.20.1.zip
+        run: unzip -q herobrine-forge-1.20.1-1.zip
 
       - name: Build
         working-directory: herobrine-forge-1.20.1
