@@ -22,7 +22,22 @@ jobs:
         working-directory: herobrine-forge-1.20.1
         run: |
           chmod +x gradlew
-          ./gradlew build --no-daemon
+          set -o pipefail
+          ./gradlew build --no-daemon --console=plain --stacktrace 2>&1 | tee ../build.log
+
+      - name: Show errors in summary
+        if: failure()
+        run: |
+          {
+            echo '## Build errors'
+            echo '```'
+            grep -n -E -B1 -A6 'error:|FAILURE|What went wrong|Execution failed|Could not' build.log | head -300
+            echo '```'
+            echo '## Last 60 lines'
+            echo '```'
+            tail -n 60 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
