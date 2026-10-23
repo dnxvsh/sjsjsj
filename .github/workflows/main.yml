@@ -29,5 +29,5 @@ jobs:
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: steve-buddy-mod
+          name: steve-buddy-mod.zip
           path: build/libs/*.jar
