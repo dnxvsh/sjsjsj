@@ -15,7 +15,7 @@ jobs:
       - name: Unzip the mod source
         run: |
           mkdir -p mod
-          unzip -o steve-buddy-mod.zip -d mod
+          unzip -o steve-buddy-mod-1.zip -d mod
           ls -la mod
 
       - name: Set up JDK 17
