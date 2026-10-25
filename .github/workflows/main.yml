@@ -2,7 +2,7 @@ name: Build Sword of Kings
 
 on:
   push:
-  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
@@ -13,21 +13,73 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v4
+      # يبحث عن أحدث ملف zip يبدأ اسمه بـ SwordOfKings، ولا يهم بقية الاسم
+      - name: Find and unzip the mod source
+        shell: bash
+        run: |
+          ZIP=""
+          while IFS= read -r f; do
+            if [ -f "$f" ]; then ZIP="$f"; break; fi
+          done < <(git log --name-only --diff-filter=AM --pretty=format: -- ':(icase)swordofkings*.zip' | grep -i '\.zip$' || true)
+          if [ -z "$ZIP" ]; then
+            ZIP=$(find . -maxdepth 1 -iname 'swordofkings*.zip' -print -quit)
+          fi
+          if [ -z "$ZIP" ]; then
+            echo "::error::لا يوجد ملف zip يبدأ اسمه بـ SwordOfKings في جذر المستودع"
+            ls -la
+            exit 1
+          fi
+          echo "Using zip: $ZIP"
+          rm -rf mod && mkdir mod
+          unzip -q "$ZIP" -d mod
+          BUILD_FILE=$(find mod -name build.gradle -print -quit)
+          if [ -z "$BUILD_FILE" ]; then
+            echo "::error::لا يوجد build.gradle داخل الملف المضغوط"
+            find mod | head -50
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$BUILD_FILE")
+          echo "Project folder: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v4
+      # Forge 1.20.1 (ForgeGradle 6) يحتاج Gradle 8.1.1
+      - name: Set up Gradle 8.1.1
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.1.1'
 
-      - run: gradle build --no-daemon --console=plain
+      - name: Build mod
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR"
+          gradle build --no-daemon --console=plain 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
-      - uses: actions/upload-artifact@v4
+      # عند الفشل: يعرض الأخطاء في أعلى صفحة التشغيل (Summary)
+      - name: Show build errors
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo '## Build errors'
+            echo '```'
+            grep -E 'error:|What went wrong|FAILED' -A3 "$GITHUB_WORKSPACE/build.log" | head -100 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
         with:
           name: SwordOfKings-mod
-          path: build/libs/*.jar
+          path: ${{ env.PROJECT_DIR }}/build/libs/*.jar
           if-no-files-found: error
